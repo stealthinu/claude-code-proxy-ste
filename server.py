@@ -223,6 +223,15 @@ class MessagesRequest(BaseModel):
                 new_model = f"openai/{BIG_MODEL}"
                 mapped = True
 
+        # Map Opus to BIG_MODEL based on provider preference
+        elif 'opus' in clean_v.lower():
+            if PREFERRED_PROVIDER == "google" and BIG_MODEL in GEMINI_MODELS:
+                new_model = f"gemini/{BIG_MODEL}"
+                mapped = True
+            else:
+                new_model = f"openai/{BIG_MODEL}"
+                mapped = True
+
         # Add prefixes to non-mapped models if they match known lists
         elif not mapped:
             if clean_v in GEMINI_MODELS and not v.startswith('gemini/'):
@@ -289,6 +298,15 @@ class TokenCountRequest(BaseModel):
 
         # Map Sonnet to BIG_MODEL based on provider preference
         elif 'sonnet' in clean_v.lower():
+            if PREFERRED_PROVIDER == "google" and BIG_MODEL in GEMINI_MODELS:
+                new_model = f"gemini/{BIG_MODEL}"
+                mapped = True
+            else:
+                new_model = f"openai/{BIG_MODEL}"
+                mapped = True
+
+        # Map Opus to BIG_MODEL based on provider preference
+        elif 'opus' in clean_v.lower():
             if PREFERRED_PROVIDER == "google" and BIG_MODEL in GEMINI_MODELS:
                 new_model = f"gemini/{BIG_MODEL}"
                 mapped = True
@@ -1312,7 +1330,12 @@ async def create_message(
         # Check for LiteLLM-specific attributes
         for attr in ['message', 'status_code', 'response', 'llm_provider', 'model']:
             if hasattr(e, attr):
-                error_details[attr] = getattr(e, attr)
+                value = getattr(e, attr)
+                # Convert Response objects to string to avoid JSON serialization errors
+                if hasattr(value, '__class__') and value.__class__.__name__ == 'Response':
+                    error_details[attr] = str(value)
+                else:
+                    error_details[attr] = value
         
         # Check for additional exception details in dictionaries
         if hasattr(e, '__dict__'):
